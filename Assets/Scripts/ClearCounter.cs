@@ -7,6 +7,5 @@ public class ClearCounter : MonoBehaviour
 {
     internal void Interact()
     {
-
     }
 }

@@ -5,13 +5,31 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    public static PlayerController Instance { get; private set; }
+
+    public event EventHandler<OnSelectedCounterChangedEventArgs> OnSelectedCounterChanged;
+
+    public class OnSelectedCounterChangedEventArgs : EventArgs
+    {
+        public ClearCounter selectedCounter;
+    }
+
     [SerializeField] float moveSpeed = 7f;
     [SerializeField] GameInput gameInput;
     [SerializeField] LayerMask countersLayerMask;
 
     private bool isWalking;
     private Vector3 lastInteractDir;
+    private ClearCounter selectedCounter;
 
+    private void Awake()
+    {
+        if (Instance != null)
+        {
+            Debug.Log("There is more than one Player instance.");
+        }
+        Instance = this;
+    }
     private void Start()
     {
         gameInput.OnInteractAction += GameInput_OnInteractAction;
@@ -19,22 +37,9 @@ public class PlayerController : MonoBehaviour
 
     private void GameInput_OnInteractAction(object sender, EventArgs e)
     {
-        Vector2 inputVector = gameInput.GetMovementVectorNormalized();
-
-        Vector3 moveDir = new Vector3(inputVector.x, 0f, inputVector.y);
-
-        if (moveDir != Vector3.zero)
+        if (selectedCounter != null)
         {
-            lastInteractDir = moveDir;
-        }
-
-        float interactDistance = 2f;
-        if (Physics.Raycast(transform.position, lastInteractDir, out RaycastHit raycastHit, interactDistance, countersLayerMask))
-        {
-            if (raycastHit.transform.TryGetComponent(out ClearCounter clearCounter))
-            {
-                clearCounter.Interact();
-            }
+            selectedCounter.Interact();
         }
     }
 
@@ -111,13 +116,36 @@ public class PlayerController : MonoBehaviour
         }
 
         float interactDistance = 2f;
+
         if (Physics.Raycast(transform.position, lastInteractDir, out RaycastHit raycastHit, interactDistance, countersLayerMask))
         {
             if (raycastHit.transform.TryGetComponent(out ClearCounter clearCounter))
             {
-
+                if (clearCounter != selectedCounter)
+                {
+                    SetSelectedCounter(clearCounter);
+                }
+            }
+            else
+            {
+                SetSelectedCounter(null);
             }
         }
+        else
+        {
+            SetSelectedCounter(null);
+        }
 
+    }
+
+    private void SetSelectedCounter(ClearCounter selectedCounter)
+    {
+        this.selectedCounter = selectedCounter;
+
+
+        OnSelectedCounterChanged?.Invoke(this, new OnSelectedCounterChangedEventArgs
+        {
+            selectedCounter = selectedCounter
+        });
     }
 }
